@@ -1,7 +1,3 @@
-//
-// Created by florian on 18.11.15.
-//
-
 #ifndef ART_OPTIMISTICLOCK_COUPLING_N_H
 #define ART_OPTIMISTICLOCK_COUPLING_N_H
 #include "N.h"
