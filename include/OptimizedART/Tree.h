@@ -1,3 +1,7 @@
+//
+// Created by florian on 18.11.15.
+//
+
 #ifndef ART_OPTIMISTICLOCK_COUPLING_N_H
 #define ART_OPTIMISTICLOCK_COUPLING_N_H
 #include "N.h"
@@ -93,6 +97,10 @@ namespace ART_OLC {
         long size();
 
         void makeFastRoot();
+
+        void getFastPointer(std::vector<uint64_t>& res){
+            return fastPointerBuffer.pointerSavedPath(res);
+        }
     };
 }
 

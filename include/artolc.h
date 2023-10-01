@@ -9,29 +9,35 @@
 #include "OptimizedART/Tree.cpp"
 #include <utility>
 
-namespace alt_index {
+namespace alt_index
+{
 
-    template<class key_type, class value_type>
-    class art_interface {
+    template <class key_type, class value_type>
+    class artInterface
+    {
     public:
-
-        art_interface() {
-            index = new ART_OLC::Tree(load_key);
+        artInterface()
+        {
+            index = new ART_OLC::Tree(loadKey);
             auto init_pair = new std::pair<key_type, value_type>(~0ull, 0);
-            load_key(reinterpret_cast<uint64_t>(&init_pair), max_key);
+            loadKey(reinterpret_cast<uint64_t>(&init_pair), max_key);
         }
 
-        ~art_interface(){
+        ~artInterface()
+        {
             delete index;
         }
 
-        void bulk_load(std::pair<key_type, value_type> *data, size_t nums){
-            for(size_t i = 0 ; i < nums ; i++){
+        void bulkLoad(std::pair<key_type, value_type> *data, size_t nums)
+        {
+            for (size_t i = 0; i < nums; i++)
+            {
                 put(data[i].first, data[i].second);
             }
         }
 
-        bool put(key_type key, value_type value){
+        bool put(key_type key, value_type value)
+        {
             thread_local static auto tid = index->getThreadInfo();
 
             auto temp = new std::pair<key_type, value_type>(key, value);
@@ -42,7 +48,8 @@ namespace alt_index {
             return true;
         }
 
-        bool fast_put(key_type key, value_type value, int& fast_pointer_index){
+        bool fastPut(key_type key, value_type value, int &fast_pointer_index)
+        {
             thread_local static auto tid = index->getThreadInfo();
 
             auto temp = new std::pair<key_type, value_type>(key, value);
@@ -53,15 +60,17 @@ namespace alt_index {
             return true;
         }
 
-        bool get(key_type key, value_type& value){
+        bool get(key_type key, value_type &value)
+        {
             thread_local static auto tid = index->getThreadInfo();
             bool ok = false;
 
             Key k;
             key_type reserved = swap_endian(key);
             k.set(reinterpret_cast<char *>(&reserved), sizeof(key));
-            auto value_ptr = reinterpret_cast<std::pair<key_type, value_type>*>(index->lookup(k,tid));
-            if(value_ptr){
+            auto value_ptr = reinterpret_cast<std::pair<key_type, value_type> *>(index->lookup(k, tid));
+            if (value_ptr)
+            {
                 value = value_ptr->second;
                 ok = true;
             }
@@ -69,15 +78,17 @@ namespace alt_index {
             return ok;
         }
 
-        bool fast_get(key_type key, value_type& value, int& fast_pointer_index){
+        bool fastGet(key_type key, value_type &value, int &fast_pointer_index)
+        {
             thread_local static auto tid = index->getThreadInfo();
             bool ok = false;
 
             Key k;
             key_type reserved = swap_endian(key);
             k.set(reinterpret_cast<char *>(&reserved), sizeof(key));
-            auto value_ptr = reinterpret_cast<std::pair<key_type, value_type>*>(index->fast_lookup(k, fast_pointer_index, tid));
-            if(value_ptr){
+            auto value_ptr = reinterpret_cast<std::pair<key_type, value_type> *>(index->fast_lookup(k, fast_pointer_index, tid));
+            if (value_ptr)
+            {
                 value = value_ptr->second;
                 ok = true;
             }
@@ -85,7 +96,8 @@ namespace alt_index {
             return ok;
         }
 
-        bool update(key_type key, value_type value){
+        bool update(key_type key, value_type value)
+        {
             thread_local static auto tid = index->getThreadInfo();
 
             auto temp = new std::pair<key_type, value_type>(key, value);
@@ -95,7 +107,8 @@ namespace alt_index {
             return index->update(k, reinterpret_cast<TID>(temp), tid);
         }
 
-        bool remove(key_type key){
+        bool remove(key_type key)
+        {
             thread_local static auto tid = index->getThreadInfo();
             bool ok = false;
 
@@ -106,7 +119,8 @@ namespace alt_index {
             return ok;
         }
 
-        bool fast_remove(key_type key, int& fast_pointer_index){
+        bool fast_remove(key_type key, int &fast_pointer_index)
+        {
             thread_local static auto tid = index->getThreadInfo();
             bool ok = false;
 
@@ -117,14 +131,15 @@ namespace alt_index {
             return ok;
         }
 
-        size_t scan(key_type key_low_bound, key_type key_upper_bound, size_t key_num) {
+        size_t scan(key_type key_low_bound, key_type key_upper_bound, size_t key_num)
+        {
             thread_local static auto t = index->getThreadInfo();
             Key k_start;
             k_start.setKeyLen(sizeof(key_low_bound));
             reinterpret_cast<key_type *>(&k_start[0])[0] = swap_endian(key_low_bound);
 
             Key k_end;
-            k_end.setKeyLen(sizeof(key_low_bound));
+            k_end.setKeyLen(sizeof(key_upper_bound));
             reinterpret_cast<key_type *>(&k_end[0])[0] = swap_endian(key_upper_bound);
 
             TID results[key_num];
@@ -134,10 +149,11 @@ namespace alt_index {
             return resultCount;
         }
 
-        void build_fast_pointer(key_type key1, key_type key2, int& ret){
+        void build_fast_pointer(key_type key1, key_type key2, int &ret)
+        {
             thread_local static auto tid = index->getThreadInfo();
-            
-            Key k1,k2;
+
+            Key k1, k2;
             key_type reserved1 = swap_endian(key1);
             key_type reserved2 = swap_endian(key2);
             k1.set(reinterpret_cast<char *>(&reserved1), sizeof(key1));
@@ -145,38 +161,47 @@ namespace alt_index {
             index->build_fast_pointer(k1, k2, ret, tid);
         }
 
-        void makeFastRoot() {
+        void makeFastRoot()
+        {
             index->makeFastRoot();
         }
 
-        ART_OLC::N* get_root(){
+        ART_OLC::N *get_root()
+        {
             return index->root;
         }
 
-        //init the key load function
-        static void load_key(TID tid, Key& key){
-            std::pair<key_type, value_type>* value_ptr = reinterpret_cast<std::pair<key_type, value_type> *>(tid);
+        // init the key load function
+        static void loadKey(TID tid, Key &key)
+        {
+            std::pair<key_type, value_type> *value_ptr = reinterpret_cast<std::pair<key_type, value_type> *>(tid);
             key_type reserved = swap_endian(value_ptr->first);
             key.set(reinterpret_cast<char *>(&reserved), sizeof(value_ptr->first));
         }
 
-        size_t memory_consumption() const{
+        size_t memory_consumption() const
+        {
             return index->size();
         }
 
-    public:
-        Key max_key;   //upper bound of the key for scan
-        ART_OLC::Tree* index;   //art pointer
+        void get_fast_pointer(std::vector<uint64_t>& res){
+            index->getFastPointer(res);
+        }
 
-        inline static uint32_t swap_endian(uint32_t i) {
+    public:
+        Key max_key;          // upper bound of the key for scan
+        ART_OLC::Tree *index; // art pointer
+
+        inline static uint32_t swap_endian(uint32_t i)
+        {
             return __builtin_bswap32(i);
         }
-        inline static uint64_t swap_endian(uint64_t i) {
+        inline static uint64_t swap_endian(uint64_t i)
+        {
             return __builtin_bswap64(i);
         }
     };
 
-
 }
 
-#endif //ALT_INDEX_ARTOLC_H
+#endif // ALT_INDEX_ARTOLC_H

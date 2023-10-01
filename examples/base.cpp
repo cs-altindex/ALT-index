@@ -1,5 +1,5 @@
 #include <iostream>
-#include "include/alt_index.h"
+#include "alt_index.h"
 #include "sys/time.h"
 #include <sstream>
 #include <fstream>
@@ -34,13 +34,13 @@ long long load_binary_data(T *&data, long long length, const std::string &file_p
 }
 
 int main() {
-    alt_index::alt_node<uint64_t , uint64_t> index;
+    alt_index::AltIndex<uint64_t , uint64_t> index;
     bool exist = true;
     long long miss_cnt = 0;
     uint64_t value;
 
-    int table_size = 20000000;
-    int init_table_size = 10000000;
+    int table_size = 10000100;
+    int init_table_size = 100;
     int write_table_size = 10000000;
 
     struct timeval start, end;
@@ -48,31 +48,29 @@ int main() {
     uint64_t* keys = new uint64_t[table_size];
 
 //    //real-world dataset
-//    string data_path = "../datasets/covid";
-//    load_binary_data(keys, table_size, data_path);
+    string data_path = "../datasets/covid";
+    load_binary_data(keys, table_size, data_path);
 
     //synthetic data
-    vector<int> temp;
-    for (int i = 0; i < table_size; ++i){
-        keys[i] = i;
-    }
-    random_shuffle(keys,keys+table_size);
+//    vector<int> temp;
+//    for (int i = 0; i < table_size; ++i){
+//        keys[i] = i;
+//    }
+//    random_shuffle(keys,keys+table_size);
 
     vector<pair<uint64_t , uint64_t>> data;
     data.reserve(init_table_size);
+    std::random_shuffle(keys,keys+table_size);
     sort(keys, keys + init_table_size);
 
     for (int i = 0; i < init_table_size; i++) {
         data.push_back({keys[i], 12345678});
-        // cout << keys[i] << endl;
+         cout << keys[i] << endl;
     }
 
-    //bulk load data
-    index.bulk_load(data.data(), data.size());
 
-    std::cout << index.buffer_num << std::endl;
-    std::cout << index.nodes.size() << std::endl;
-//    std::cout << index.buffer->memory_consumption() << std::endl;
+    //bulk load data
+    index.bulkLoad(data.data(), data.size());
 
     //test insert
     for (int i = init_table_size; i < init_table_size + write_table_size ; i++) {
@@ -80,9 +78,12 @@ int main() {
         // cout << keys[i] << endl;
     }
 
+    std::cout << index.buffer_num << std::endl;
+    std::cout << index.nodes.size() << std::endl;
+//    std::cout << index.buffer->memory_consumption() << std::endl;
     //test find
-     for(int i = 0 ; i < init_table_size ; i++) {
-         index.find(keys[i], exist);
+     for(int i = 0 ; i < table_size ; i++) {
+         index.find(keys[i],exist);
          if (exist) {
 
          } else {
@@ -90,13 +91,17 @@ int main() {
          }
      }
     std::cout << miss_cnt << std::endl;
+//    uint64_t start_range,end_range;
+//    start_range = 1344795473723449349;
+//    end_range = 1344907383454146561;
+//    std::cout <<  index.rangeQuery(start_range,end_range) << std::endl;
 
 
 //     test update
-    for (int i = 0; i < init_table_size; i++) {
-        index.update(keys[i], 23456781);
+//    for (int i = 0; i < init_table_size; i++) {
+//        index.update(keys[i], 23456781);
         // cout << keys[i] << endl;
-    }
+//    }
 
 
     return 0;

@@ -11,9 +11,11 @@
 #include <algorithm>
 #include <immintrin.h>
 
-namespace alt_index {
-    template<class key_type>
-    class LinearModel {
+namespace alt_index
+{
+    template <class key_type>
+    class LinearModel
+    {
     public:
         LinearModel() = default;
 
@@ -21,19 +23,22 @@ namespace alt_index {
 
         explicit LinearModel(const LinearModel &other) : a(other.a), b(other.b) {}
 
-        inline int predict(key_type key) const {
+        ~LinearModel() {}
+
+        inline int predict(key_type key) const
+        {
             return static_cast<int>(a * static_cast<double>(key) + b);
         }
 
-
-        inline double predict_double(key_type key) const {
+        inline double predict_double(key_type key) const
+        {
             return a * static_cast<double>(key) + b;
         }
 
-        //variable type is decided
+        // variable type is decided
         double a;
         double b;
     };
 }
 
-#endif //ALT_INDEX_LINEAR_MODEL_H
+#endif // ALT_INDEX_LINEAR_MODEL_H

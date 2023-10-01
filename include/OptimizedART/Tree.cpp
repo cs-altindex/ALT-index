@@ -321,7 +321,7 @@ namespace ART_OLC {
             parentNode = node;
             vp = v;
             node = nextNode;
-            PCEqualsResults prefixResult;
+            PCEqualsResults prefixResult;   //check prefix result
             v = node->readLockOrRestart(needRestart);
             if (needRestart) goto restart;
             prefixResult = checkPrefixEquals(node, level, start, end, loadKey, needRestart);

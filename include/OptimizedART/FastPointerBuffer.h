@@ -7,8 +7,7 @@
 
 #include<iostream>
 #include "N.h"
-
-using namespace ART;
+#include "../concurrency.h"
 
 namespace ART_OLC {
 
@@ -37,7 +36,13 @@ namespace ART_OLC {
 
         struct FastPointerItem {
             N *fast_pointer;
-            FastPointerItem(N* pointer) : fast_pointer(pointer){}
+            alt_index::spin_lock *lock_;
+
+            FastPointerItem(N* pointer) : fast_pointer(pointer){
+                lock_ = new alt_index::spin_lock();
+            }
+
+            ~FastPointerItem(){}
         };
 
         FastPointerItem getFastPointer(int pointerIndex) const {
@@ -57,8 +62,9 @@ namespace ART_OLC {
             if(index >= pointer_buffer.size()){
                 return false;
             }
-
+            pointer_buffer[index].lock_->lock();
             pointer_buffer[index].fast_pointer = new_pointer;
+            pointer_buffer[index].lock_->unlock();
             return true;
 
         }
@@ -69,6 +75,13 @@ namespace ART_OLC {
 
         int size(){
             return pointer_buffer.size();
+        }
+
+        //get the match level of each fast pointer
+        void pointerSavedPath(std::vector<uint64_t>& res){
+            for(uint64_t i = 0 ; i < pointer_buffer.size() ; i++){
+                res.push_back(pointer_buffer[i].fast_pointer->getMatchLevel());
+            }
         }
 
     public:

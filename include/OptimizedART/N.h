@@ -1,3 +1,7 @@
+//
+// Created by florian on 05.08.15.
+//
+
 #ifndef ART_OPTIMISTIC_LOCK_COUPLING_N_H
 #define ART_OPTIMISTIC_LOCK_COUPLING_N_H
 //#define ART_NOREADLOCK
