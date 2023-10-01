@@ -39,3 +39,7 @@ string data_path = ${your own dataset path}
 ## Coming Soon
 
 We evaluate our ALT-index with GRE benchmarking tool. We will update that code soon.
+
+## Acknowledgement
+
+- Our optimized ART is based on [ARTSynchronized](https://github.com/flode/ARTSynchronized) 
