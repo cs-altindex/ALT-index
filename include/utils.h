@@ -16,7 +16,8 @@ return 31 - __builtin_clz(x);
 
 template<typename key_type>
 static int binary_search(const key_type *arr, const int n, const key_type key) {
-//static int binary_search_branchless(const int *arr, int n, int key) {
+    if(n == 1)
+        return 0;
     intptr_t pos = -1;
     intptr_t logstep = bsr(n - 1);
     intptr_t step = intptr_t(1) << logstep;

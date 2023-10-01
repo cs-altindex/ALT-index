@@ -386,6 +386,22 @@ namespace alt_index
 //                        std::cout << "trigger dynamic retraining:" << node_keys[node_pos] << std::endl;
                     }
                 }
+                if(node->numInserts > 200 * node->numItems){
+                    for(size_t i = 0 ; i < node->numItems ; i++){
+                        retry3:
+                        needRestart = false;
+                        node->items[i].writeLockOrRestart(needRestart);
+                        if (needRestart) {
+                            goto retry3;
+                        }
+                        BITMAP_SET(node->noneBitmap, predict_pos);
+                        node->items[i].writeUnlock();
+                        evictData(node, node_pos, i);
+                    }
+//                    //update pointer
+                    nodes[node_pos] = nodes[node_pos]->expandNode;
+//
+                }
             }
             return ok;
         }
@@ -456,50 +472,49 @@ namespace alt_index
         bool update(const KeyType &key, const ValueType &value)
         {
             size_t node_pos = binary_search(&node_keys[0], node_keys_num, key);
-            bool ok = true;
-
             if (node_pos >= nodes_num)
             {
                 node_pos = nodes_num - 1;
             }
 
             Node *node = nodes[node_pos];
-            int predict_pos = expected_position(node, key);
+            int key_pos = expected_position(node, key);
             // read lock
             restart:
             bool needRestart = false;
-            auto v = node->items[predict_pos].readLockOrRestart(needRestart);
+            auto v = node->items[key_pos].readLockOrRestart(needRestart);
             if (needRestart)
                 goto restart;
-
-            // data doesn't exist in learned index
-            if (BITMAP_GET(node->noneBitmap, predict_pos))
+            if (BITMAP_GET(node->noneBitmap, key_pos))
             {
-                ok = false;
-                return ok;
+                if(USE_DYNAMIC_RETRAIN && node->expand){
+                    return updateInExpand(node->expandNode, node_pos, key, value);
+                }
+                else{
+                    return false;
+                }
             }
             else
             {
-                // write lock
-                node->items[predict_pos].upgradeToWriteLockOrRestart(v, needRestart);
-                if (needRestart)
+                // key exist in node
+                if (node->items[key_pos].components.data.key == key)
                 {
-//                    node->items[predict_pos].writeUnlock();
-                    goto restart;
-                }
+                    node->items[key_pos].readUnlockOrRestart(v, needRestart);
+                    if (needRestart)
+                        goto restart;
 
-                if (node->items[predict_pos].components.data.key == key)
-                {
-                    node->items[predict_pos].components.data.value = value;
-                    node->items[predict_pos].writeUnlock();
+                    return true;
                 }
                 else
                 {
-                    node->items[predict_pos].writeUnlock();
-                    ok = buffer->update(key, value);
+                    if(USE_DYNAMIC_RETRAIN && node->expand){
+                        return updateInExpand(node->expandNode, node_pos, key, value);
+                    }
+
+                    return buffer->update(key, value);
                 }
             }
-            return ok;
+            return true;
         }
 
         /**
@@ -695,10 +710,10 @@ namespace alt_index
                 else {
                     ValueType ret_val;
                     // if the fast pointer is invalid
-                    searchInBuffer(node_pos, key, exist, expandNode);
+                    ret_val = searchInBuffer(node_pos, key, exist, expandNode);
+                    return ret_val;
                 }
             }
-
         }
 
         ValueType searchInBuffer(const int& node_pos, const KeyType& key, bool& exist, Node* node){
@@ -733,6 +748,33 @@ namespace alt_index
                     return static_cast<ValueType>(0);
                 }
             }
+        }
+
+        bool updateInExpand(Node* expandNode, const int& node_pos, const KeyType& key, const ValueType& value){
+            restart:
+            bool needRestart = false;
+            int expand_pos = expected_position(expandNode, key);
+            auto v = expandNode->items[expand_pos].readLockOrRestart(needRestart);
+            if(needRestart)
+                goto restart;
+
+            if(BITMAP_GET(expandNode->noneBitmap, expand_pos)){
+                return buffer->update(key, value);
+            }
+            else{
+                //slot is occupied
+                if(expandNode->items[expand_pos].components.data.key == key){
+                    expandNode->items[expand_pos].upgradeToWriteLockOrRestart(v, needRestart);
+                    if (needRestart)
+                        goto restart;
+                    expandNode->items[expand_pos].components.data.value = value;
+                    return true;
+                }
+                else {
+                    return buffer->update(key, value);
+                }
+            }
+
         }
 
 

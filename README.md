@@ -36,6 +36,21 @@ string data_path = ${your own dataset path}
 ./build/ALT_index
 ```
 
+- Configurations for benchmark:
+```c++
+#define PREALLOC_NODE_NUMS 1000000
+#define VECTOR_RESERVE_NUMS 10000000
+#define ARR_GAPS 5
+
+#define USE_FAST_POINTER true
+#define USE_DYNAMIC_RETRAIN true
+
+#define USE_STATISTIC false   
+
+//on line 861: the error bound of GPL model is set to bulkload number / 1000
+segmentPartition(keys + used_index, remain_nums, segment, num_keys / 1000);
+```
+
 ## Coming Soon
 
 We evaluate our ALT-index with GRE benchmarking tool. We will update that code soon.
