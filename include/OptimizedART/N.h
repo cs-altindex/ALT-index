@@ -96,6 +96,8 @@ namespace ART_OLC {
 
         static N *getChild(const uint8_t k, const N *node);
 
+        static N *getChildLowerBound(const uint8_t k, const N *node);
+
         static N *
         insertAndUnlock(N *node, uint64_t v, N *parentNode, uint64_t parentVersion, uint8_t keyParent, uint8_t key,
                         N *val, bool &needRestart,
@@ -172,6 +174,8 @@ namespace ART_OLC {
 
         N *getChild(const uint8_t k) const;
 
+        N *getChildLowerBound(const uint8_t k) const;
+
         void remove(uint8_t k);
 
         N *getAnyChild() const;
@@ -241,6 +245,8 @@ namespace ART_OLC {
 
         N *getChild(const uint8_t k) const;
 
+        N *getChildLowerBound(const uint8_t k) const;
+
         void remove(uint8_t k);
 
         N *getAnyChild() const;
@@ -278,6 +284,8 @@ namespace ART_OLC {
 
         N *getChild(const uint8_t k) const;
 
+        N *getChildLowerBound(const uint8_t k) const;
+
         void remove(uint8_t k);
 
         N *getAnyChild() const;
@@ -311,6 +319,8 @@ namespace ART_OLC {
         bool change(uint8_t key, N *n);
 
         N *getChild(const uint8_t k) const;
+
+        N *getChildLowerBound(const uint8_t k) const;
 
         void remove(uint8_t k);
 

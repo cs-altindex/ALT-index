@@ -60,6 +60,17 @@ namespace ART_OLC {
         }
     }
 
+    N *N16::getChildLowerBound(const uint8_t k) const {
+        N *const *childPos = getChildPos(k);
+        if (childPos == nullptr) {
+            printf("n16_1\n");
+            return children[count - 1];
+        } else {
+            printf("n16_2\n");
+            return *childPos;
+        }
+    }
+
     void N16::remove(uint8_t k) {
         N *const *leafPlace = getChildPos(k);
         assert(leafPlace != nullptr);

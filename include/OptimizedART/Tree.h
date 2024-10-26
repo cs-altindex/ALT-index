@@ -80,6 +80,9 @@ namespace ART_OLC {
         bool lookupRange(const Key &start, const Key &end, Key &continueKey, TID result[], std::size_t resultLen,
                          std::size_t &resultCount, ThreadInfo &threadEpocheInfo) const;
 
+        bool fast_lookupRange(const Key &start, const Key &end, Key &continueKey, TID result[],
+                                    std::size_t resultSize, std::size_t &resultsFound, ThreadInfo &threadEpocheInfo) const;
+
         void insert(const Key &k, TID tid, ThreadInfo &epocheInfo);
 
         void fast_insert(const Key &k, TID tid, int& fastPointerIndex, ThreadInfo &epocheInfo);
@@ -92,6 +95,8 @@ namespace ART_OLC {
 
         void build_fast_pointer(const Key &k1, const Key &k2, int& ret, ThreadInfo &threadEpocheInfo);     //get the last node which has two keys' prefix
 
+        N * build_fast_pointer_range(const Key &k1, const Key &k2, int& ret) const;
+
         void clear_stat();
 
         long size();
@@ -100,6 +105,10 @@ namespace ART_OLC {
 
         void getFastPointer(std::vector<uint64_t>& res){
             return fastPointerBuffer.pointerSavedPath(res);
+        }
+
+        long long memoryFastPointer(){
+            return fastPointerBuffer.size() * sizeof(N*);
         }
     };
 }

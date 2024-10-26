@@ -45,6 +45,25 @@ namespace ART_OLC {
         return children[k];
     }
 
+    N *N256::getChildLowerBound(const uint8_t k) const {
+        N *lowerChild = nullptr;
+        for (uint64_t i = 0; i <= k; ++i) {
+            if (children[i] != nullptr) {
+                  lowerChild = children[i];
+            }
+        }
+        if(lowerChild == nullptr){
+            for (uint64_t i = k; i < 256; ++i) {
+                if (children[i] != nullptr) {
+                    lowerChild = children[i];
+                    break;
+                }
+            }
+        }
+        printf("n256_1\n");
+        return lowerChild;
+    }
+
     void N256::remove(uint8_t k) {
         children[k] = nullptr;
         count--;

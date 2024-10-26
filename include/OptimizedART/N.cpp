@@ -175,6 +175,29 @@ namespace ART_OLC {
         __builtin_unreachable();
     }
 
+    inline N *N::getChildLowerBound(const uint8_t k, const N *node) {
+        switch (node->getType()) {
+            case NTypes::N4: {
+                auto n = static_cast<const N4 *>(node);
+                return n->getChildLowerBound(k);
+            }
+            case NTypes::N16: {
+                auto n = static_cast<const N16 *>(node);
+                return n->getChildLowerBound(k);
+            }
+            case NTypes::N48: {
+                auto n = static_cast<const N48 *>(node);
+                return n->getChildLowerBound(k);
+            }
+            case NTypes::N256: {
+                auto n = static_cast<const N256 *>(node);
+                return n->getChildLowerBound(k);
+            }
+        }
+        assert(false);
+        __builtin_unreachable();
+    }
+
     void N::deleteChildren(N *node) {
         if (N::isLeaf(node)) {
             return;

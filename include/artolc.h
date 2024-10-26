@@ -145,7 +145,7 @@ namespace alt_index
             TID results[key_num];
             size_t resultCount;
             Key continueKey;
-            index->lookupRange(k_start, k_end, continueKey, results, key_num, resultCount, t);
+            index->fast_lookupRange(k_start, k_end, continueKey, results, key_num, resultCount, t);
             return resultCount;
         }
 
@@ -179,9 +179,9 @@ namespace alt_index
             key.set(reinterpret_cast<char *>(&reserved), sizeof(value_ptr->first));
         }
 
-        size_t memory_consumption() const
+        long long memory_consumption() const
         {
-            return index->size();
+            return index->size() + index->memoryFastPointer();
         }
 
         void get_fast_pointer(std::vector<uint64_t>& res){

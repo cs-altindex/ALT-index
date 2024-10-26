@@ -39,24 +39,24 @@ int main() {
     long long miss_cnt = 0;
     uint64_t value;
 
-    int table_size = 10000100;
-    int init_table_size = 100;
-    int write_table_size = 10000000;
+    int table_size = 20000;
+    int init_table_size = 10000;
+    int write_table_size = 1000;
 
     struct timeval start, end;
 
     uint64_t* keys = new uint64_t[table_size];
 
 //    //real-world dataset
-    string data_path = "../datasets/covid";
-    load_binary_data(keys, table_size, data_path);
+//    string data_path = "../datasets/covid";
+//    load_binary_data(keys, table_size, data_path);
 
     //synthetic data
-//    vector<int> temp;
-//    for (int i = 0; i < table_size; ++i){
-//        keys[i] = i;
-//    }
-//    random_shuffle(keys,keys+table_size);
+    vector<int> temp;
+    for (int i = 0; i < table_size; ++i){
+        keys[i] = i;
+    }
+    random_shuffle(keys,keys+table_size);
 
     vector<pair<uint64_t , uint64_t>> data;
     data.reserve(init_table_size);

@@ -66,7 +66,6 @@ namespace ART_OLC {
             pointer_buffer[index].fast_pointer = new_pointer;
             pointer_buffer[index].lock_->unlock();
             return true;
-
         }
 
         bool isempty(){
@@ -86,7 +85,6 @@ namespace ART_OLC {
 
     public:
         std::vector<FastPointerItem> pointer_buffer;
-
     };
 
 }

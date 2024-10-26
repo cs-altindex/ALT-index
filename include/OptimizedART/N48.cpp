@@ -44,6 +44,17 @@ namespace ART_OLC {
         }
     }
 
+    N *N48::getChildLowerBound(const uint8_t k) const {
+        for (unsigned i = k; i > 0; i--) {
+            if (childIndex[i] != emptyMarker) {
+                printf("n48_1\n");
+                return children[childIndex[i]];
+            }
+        }
+        printf("n48_2\n");
+        return nullptr;
+    }
+
     void N48::remove(uint8_t k) {
         assert(childIndex[k] != emptyMarker);
         children[childIndex[k]] = nullptr;

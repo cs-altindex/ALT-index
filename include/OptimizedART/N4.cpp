@@ -56,6 +56,17 @@ namespace ART_OLC {
         return nullptr;
     }
 
+    N *N4::getChildLowerBound(const uint8_t k) const{
+        for (uint32_t i = 0; i < count; ++i) {
+            if (keys[i] == k) {
+                printf("n4_1\n");
+                return children[i];
+            }
+        }
+        printf("n4_2\n");
+        return children[count - 1];
+    }
+
     void N4::remove(uint8_t k) {
         for (uint32_t i = 0; i < count; ++i) {
             if (keys[i] == k) {

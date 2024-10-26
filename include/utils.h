@@ -11,7 +11,7 @@
 
 // power of 2 at most x, undefined for x == 0
 FORCEINLINE uint32_t bsr(uint32_t x) {
-return 31 - __builtin_clz(x);
+    return 31 - __builtin_clz(x);
 }
 
 template<typename key_type>

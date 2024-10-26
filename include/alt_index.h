@@ -28,9 +28,8 @@
     }
 
 #define PREALLOC_NODE_NUMS 1000000
-#define EPSILON 256
 #define VECTOR_RESERVE_NUMS 10000000
-#define ARR_GAPS 5
+#define ARR_GAPS 2
 
 #define USE_FAST_POINTER true
 #define USE_DYNAMIC_RETRAIN true
@@ -337,6 +336,7 @@ namespace alt_index
                     evictData(node, node_pos, predict_pos);
                     insertToExpand(node->expandNode, node_pos, key, value);
                 }
+                node->numInserts++;
             }
             else{
                 if (BITMAP_GET(node->noneBitmap, predict_pos))
@@ -354,6 +354,18 @@ namespace alt_index
                 }
                 else
                 {
+                    if(USE_DYNAMIC_RETRAIN){
+                        if( node->items[predict_pos].components.data.key == 0){
+                            node->items[predict_pos].upgradeToWriteLockOrRestart(v, needRestart);
+                            if (needRestart) {
+                                goto restart;
+                            }
+                            BITMAP_CLEAR(node->noneBitmap, predict_pos);
+                            node->items[predict_pos].components.data.key = key;
+                            node->items[predict_pos].components.data.value = value;
+                            node->items[predict_pos].writeUnlock();
+                        }
+                    }
                     insertToBuffer(node_pos, key, value, node);
                 }
                 node->numInserts++;
@@ -376,17 +388,38 @@ namespace alt_index
                         const int bitmap_size = BITMAP_SIZE(expandNode->numItems);
                         expandNode->noneBitmap = new_bitmap(bitmap_size);
                         memset(expandNode->noneBitmap, 0xff, sizeof(bitmap_t) * bitmap_size);
-                        expandNode->model.a = node->model.a / 2.0;
+                        expandNode->model.a = node->model.a * 2.0;
                         expandNode->model.b = 0.0 - node_keys[node_pos] * expandNode->model.a;
                         expandNode->fastPointerIndex = node->fastPointerIndex;
 
                         node->expandNode = expandNode;
                         node->expand = true;
                         node->allocateExpand = false;
+                        if(node_pos == nodes.size() - 1){   //last gpl model
+                            Node *newNode = new_nodes(1);
+                            newNode->numItems = node->numItems;
+                            newNode->numInserts = 0;
+                            newNode->expandNode = nullptr;
+                            newNode->expand = false;
+                            newNode->items = new_items(expandNode->numItems);
+                            const int bitmap_size = BITMAP_SIZE(expandNode->numItems);
+                            newNode->noneBitmap = new_bitmap(bitmap_size);
+                            memset(expandNode->noneBitmap, 0xff, sizeof(bitmap_t) * bitmap_size);
+                            newNode->model.a = node->model.a;
+                            newNode->model.b = node->model.b;
+                            newNode->fastPointerIndex = node->fastPointerIndex;
+                            nodes.emplace_back(newNode);
+
+                            int old_first_key = node_keys[node_keys.size() - 1];
+                            int new_first_key = old_first_key + node->numItems / node->model.a;
+                            node_keys.emplace_back(new_first_key);
+                            node_keys_num++;
+                            buffer->build_fast_pointer(old_first_key, new_first_key, node->fastPointerIndex);
+                        }
 //                        std::cout << "trigger dynamic retraining:" << node_keys[node_pos] << std::endl;
                     }
                 }
-                if(node->numInserts > 200 * node->numItems){
+                if(node->numInserts > 2 * node->numItems){
                     for(size_t i = 0 ; i < node->numItems ; i++){
                         retry3:
                         needRestart = false;
@@ -398,9 +431,8 @@ namespace alt_index
                         node->items[i].writeUnlock();
                         evictData(node, node_pos, i);
                     }
-//                    //update pointer
+                    //update pointer
                     nodes[node_pos] = nodes[node_pos]->expandNode;
-//
                 }
             }
             return ok;
@@ -453,8 +485,16 @@ namespace alt_index
                 }
                 else
                 {
-                    if(USE_DYNAMIC_RETRAIN && node->expand){
-                        return searchInExpand(node->expandNode, exist, node_pos, key);
+                    if(USE_DYNAMIC_RETRAIN){
+                        if(node->expand)
+                            return searchInExpand(node->expandNode, exist, node_pos, key);
+
+                        ValueType ret = searchInBuffer(node_pos, key, exist, node);
+                        if(exist && node->items[key_pos].components.data.key == 0){
+                            node->items[key_pos].components.data.value = ret;
+                            node->items[key_pos].components.data.key = key;
+                        }
+                        return ret;
                     }
 
                     return searchInBuffer(node_pos, key, exist, node);
@@ -584,57 +624,44 @@ namespace alt_index
          * @param end End key of the range
          * @return The number of key-value pairs within the specified range.
          */
-        int rangeQuery(const KeyType &start, const KeyType &end)
+        int rangeQuery(std::pair<KeyType,ValueType>* results , const KeyType &start, int len)
         {
             int result_count = 0;
 
-            int start_node_pos = binary_search(&node_keys[0], node_keys_num, start);
-            int end_node_pos = binary_search(&node_keys[0], node_keys_num, end);
+            int node_pos = binary_search(&node_keys[0], node_keys_num, start);
 
-            if (start_node_pos == -1)
-                start_node_pos = 0;
-            if (end_node_pos == -1)
-                return 0;
+            if (node_pos == -1)
+                node_pos = 0;
 
-            Node *start_node = nodes[start_node_pos];
-            Node *end_node = nodes[end_node_pos];
+            Node* cur_node = nodes[node_pos];
+            int cur_pos = expected_position(cur_node, start);
 
-            int start_pos = expected_position(start_node, start);
-            int end_pos = expected_position(end_node, end);
 
-            while (start_node != end_node)
-            {
-                while (start_pos < start_node->numItems)
-                {
-                    if (!BITMAP_GET(start_node->noneBitmap, start_pos))
-                    {
-                        result_count++;
-                    }
-                    start_pos++;
+            while(result_count < len){
+                if(cur_pos > cur_node->numItems){
+                    node_pos++;
+                    if(node_pos >= nodes_num)
+                        break;
+                    cur_node = nodes[node_pos];
+                    cur_pos = 0;
                 }
-                start_node_pos++;
-                start_node = nodes[start_node_pos];
-                start_pos = 0;
-            }
-
-            while (start_pos <= end_pos)
-            {
-                if (!BITMAP_GET(start_node->noneBitmap, start_pos))
-                {
+                if(!BITMAP_GET(cur_node->noneBitmap, cur_pos)){
+                    results[result_count] = {cur_node->items[cur_pos].components.data.key, cur_node->items[cur_pos].components.data.value};
                     result_count++;
                 }
-                start_pos++;
+                cur_pos++;
             }
-            int buffer_scan_size = 1000000;
-            int buffer_return_size = buffer->scan(start, end, buffer_scan_size);
-            result_count += buffer_return_size;
-            return result_count;
+
+            result_count += buffer->scan(start, results[result_count - 1].first, len);
+            return result_count >= len ? len : result_count;
         }
 
         //evict the data of the evict_pos of node
         void evictData(Node* node, const int& node_pos, const int& evict_pos){
             //check expand node bitmap and evict the data
             insertToExpand(node->expandNode, node_pos, node->items[evict_pos].components.data.key,node->items[evict_pos].components.data.value);
+            BITMAP_CLEAR(node->expandNode->noneBitmap, evict_pos * 2);
+            BITMAP_CLEAR(node->expandNode->noneBitmap, evict_pos * 2 + 1);
 //            node->numInsertToData--;
         }
 
@@ -737,7 +764,7 @@ namespace alt_index
                     }
                 }
             }
-                // if the fast pointer is valid
+            // if the fast pointer is valid
             else {
 
                 if (buffer->get(key, ret_val)) {
@@ -867,8 +894,10 @@ namespace alt_index
                 node_keys_num++;
             }
             //            node_keys.push_back(std::numeric_limits<KeyType>::max());
+            //            buffer->put(~0ull,0);
             if (USE_FAST_POINTER)
                 buildFastPointer();
+
             delete[] keys;
             delete[] values;
         }
@@ -1025,14 +1054,14 @@ namespace alt_index
             {
 //                size += sizeof(Node);
 //                size += sizeof(*(nodes[i]->noneBitmap));
-//                size += sizeof(nodes[i]->noneBitmap);
+                size += sizeof(nodes[i]->noneBitmap);
 //                size += sizeof(KeyType);
 //                for(int i = 0 ; i < nodes[i]->numItems ; i++){
 //                    size += sizeof(Item);
 //                }
-//                size += sizeof(Item) * nodes[i]->numItems;
+                size += sizeof(Item) * nodes[i]->numItems;
             }
-//            size += buffer->memory_consumption();
+            size += buffer->memory_consumption();
             return size;
         }
 
