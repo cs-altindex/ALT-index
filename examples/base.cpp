@@ -37,6 +37,7 @@ int main() {
     alt_index::AltIndex<uint64_t , uint64_t> index;
     bool exist = true;
     long long miss_cnt = 0;
+    long long found_cnt = 0;
     uint64_t value;
 
     int table_size = 20000;
@@ -78,19 +79,19 @@ int main() {
         // cout << keys[i] << endl;
     }
 
-    std::cout << index.buffer_num << std::endl;
-    std::cout << index.nodes.size() << std::endl;
+    std::cout <<"number of gpl model: " << index.nodes.size() << std::endl;
 //    std::cout << index.buffer->memory_consumption() << std::endl;
     //test find
-     for(int i = 0 ; i < table_size ; i++) {
-         index.find(keys[i],exist);
-         if (exist) {
-
-         } else {
-             miss_cnt++;
-         }
-     }
-    std::cout << miss_cnt << std::endl;
+    for(int i = 0 ; i < table_size ; i++) {
+        index.find(keys[i],exist);
+        if (exist) {
+            found_cnt++;
+        } else {
+            miss_cnt++;
+        }
+    }
+    std::cout << "number of keys found: " << found_cnt << std::endl;
+    std::cout << "number of keys not found: " << miss_cnt << std::endl;
 //    uint64_t start_range,end_range;
 //    start_range = 1344795473723449349;
 //    end_range = 1344907383454146561;

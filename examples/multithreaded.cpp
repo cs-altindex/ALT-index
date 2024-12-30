@@ -46,7 +46,7 @@ int main() {
 #pragma omp parallel for schedule(static, 12)
     for (int i = 0; i < key_num; i++) {
         bool exist = false;
-        std::cout<<"value at "<<i<<": "<<alt.find(keys[i].first,exist)<<std::endl;
+        std::cout<<"key: " << keys[i].first << " value at "<< i <<": "<<alt.find(keys[i].first,exist)<<std::endl;
         // alt.find(keys[i].first,exist);
         // if(!exist){
         //     std::cout<<"index: " << i << " key:"<<keys[i].first<<" not found!"<<std::endl;
