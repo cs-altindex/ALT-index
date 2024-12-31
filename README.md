@@ -1,8 +1,8 @@
-# ALT-index (Updating)
+# ALT-index
 
 ALT-index: A concurrent hybrid learned index for high-performance storage
 
-This project contains the code of ALT-index. Our evaluation is done through [GRE](https://github.com/gre4index/GRE).
+This project contains the code of ALT-index. Our evaluation is based on [GRE](https://github.com/gre4index/GRE).
 
 ## Compile and Run our project
 
@@ -26,7 +26,7 @@ make -j8
 ```c++
 string data_path = ${your own dataset path}
 ```
-2. set the statistic flag in ./include/alt_index:
+2. set the statistic flag in ./include/alt_index (warning: this will damage the performance):
 
 ```c++
 #define USE_STATISTIC true
@@ -38,8 +38,6 @@ string data_path = ${your own dataset path}
 
 - Configurations for benchmark:
 ```c++
-#define PREALLOC_NODE_NUMS 1000000
-#define VECTOR_RESERVE_NUMS 10000000
 #define ARR_GAPS 2
 
 #define USE_FAST_POINTER true
@@ -51,9 +49,9 @@ string data_path = ${your own dataset path}
 segmentPartition(keys + used_index, remain_nums, segment, num_keys / 1000);
 ```
 
-## Coming Soon
+## Overall Benchmark
 
-We evaluate our ALT-index with GRE benchmarking tool.
+We evaluate our ALT-index with GRE benchmarking tool, please refer to [GRE](https://github.com/cs-altindex/GRE_alt) for more details.
 
 ## Acknowledgement
 

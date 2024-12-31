@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(ALT_index)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "-O3 -p -g -march=core-avx2")
+set(CMAKE_CXX_FLAGS "-O3 -pg -march=core-avx2")
 
 find_library(JemallocLib jemalloc)
 find_library(TbbLib tbb)
