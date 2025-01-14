@@ -37,6 +37,7 @@
 #define USE_STATISTIC false
 
 // #define ENABLE_DEBUG
+// #define DEBUG
 
 typedef uint8_t bitmap_t;
 #define BITMAP_WIDTH (sizeof(bitmap_t) * 8)
@@ -225,7 +226,7 @@ namespace alt_index
             bitmap_t *noneBitmap;         // Bitmap pointer
             Node *expandNode;             // Pointer to expanded node
             bool expand;                  // Flag for expansion
-            bool allocateExpand;          // Flag to allocate and expand
+            spin_lock expandLock;         // Expand lock
         };
 
         Node *root;                  // for initial node
@@ -310,7 +311,6 @@ namespace alt_index
                 node->fastPointerIndex = 0;
                 node->expandNode = nullptr;
                 node->expand = false;
-                node->allocateExpand = false;
                 nodePool.push(node);
             }
             root = build_tree_none();
@@ -382,18 +382,22 @@ namespace alt_index
                 if (BITMAP_GET(node->noneBitmap, predict_pos))
                 {
                     // std::cout << "haha2" << std::endl;
-                    // if(key == 349517445){
-                    //     std::cout << "insert to expand node" << key << std::endl;
-                    // }
+                    #ifdef DEBUG
+                    if(key == 678844549){
+                        std::cout << "insert to expand node" << key << std::endl;
+                    }
+                    #endif
                     insertToExpand(node->expandNode, node_pos, key, value);
                 }
                 else
                 {
                     // std::cout << "haha3" << std::endl;
-                    //first evict data at old position, and insert new data to expand node
-                    // if(key == 349517445){
-                    //     std::cout << "evict and insert" << key << std::endl;
+                    #ifdef DEBUG
+                    // if(key == 678844549){
+                        std::cout << "insert to data node" << key << std::endl;
                     // }
+                    #endif
+                    //first evict data at old position, and insert new data to expand node
                     evictData(node, node_pos, predict_pos);
                     BITMAP_SET(node->noneBitmap, predict_pos);
                     // if(node_pos == 143 && predict_pos <= 3){
@@ -419,9 +423,11 @@ namespace alt_index
                     node->items[predict_pos].components.data.key = key;
                     node->items[predict_pos].components.data.value = value;
                     node->items[predict_pos].writeUnlock();
-                    // if(key == 349517445){
-                    //     std::cout << "insert to gpl model" << key << std::endl;
+                    #ifdef DEBUG
+                    // if(key == 678844549){
+                        std::cout << "insert to gpl model" << key << std::endl;
                     // }
+                    #endif
                 }
                 else
                 {
@@ -438,14 +444,18 @@ namespace alt_index
                             node->items[predict_pos].components.data.key = key;
                             node->items[predict_pos].components.data.value = value;
                             node->items[predict_pos].writeUnlock();
-                            // if(key == 349517445){
-                            //     std::cout << "insert to gpl model sparse slots" << key << std::endl;
+                            #ifdef DEBUG
+                            // if(key == 678844549){
+                                std::cout << "insert to gpl model sparse slots" << key << std::endl;
                             // }
+                            #endif
                         }
                     }
-                    // if(key == 349517445){
-                    //     std::cout << "node position: " << node_pos << " insert to art" << key << " index :" << predict_pos << std::endl;
+                    #ifdef DEBUG
+                    // if(key == 678844549){
+                        std::cout << "node position: " << node_pos << " insert to art" << key << " index :" << predict_pos << std::endl;
                     // }
+                    #endif
                     insertToBuffer(node_pos, key, value, node);
                 }
                 node->numInserts++;
@@ -457,11 +467,19 @@ namespace alt_index
                 // dynamic retrain
                 if (node->numInserts > node->numItems && node->expand == false)
                 {
-                    if (node->allocateExpand == false && node->expandNode == nullptr)
+                    node->expandLock.lock();
+                    if (node->expand == false)
                     {
-                        node->allocateExpand = true;
-                        Node *expandNode = new_nodes(1);
-                        //                        memccpy(node, expandNode, sizeof(node));
+                        Node *expandNode = nullptr;
+                        if (nodePool.empty())
+                        {
+                            expandNode = new_nodes(1);
+                        }
+                        else
+                        {
+                            expandNode = nodePool.top();
+                            nodePool.pop();
+                        }
 
                         expandNode->numInserts = expandNode->numInsertToData = 0;
                         expandNode->numItems = node->numItems * 2;
@@ -469,6 +487,7 @@ namespace alt_index
                         expandNode->expand = false;
 
                         expandNode->items = new_items(expandNode->numItems);
+                        memset(expandNode->items, 0, sizeof(Item) * expandNode->numItems);
                         const int bitmap_size = BITMAP_SIZE(expandNode->numItems);
                         expandNode->noneBitmap = new_bitmap(bitmap_size);
                         memset(expandNode->noneBitmap, 0xff, sizeof(bitmap_t) * bitmap_size);
@@ -478,10 +497,18 @@ namespace alt_index
 
                         node->expandNode = expandNode;
                         node->expand = true;
-                        node->allocateExpand = false;
                         if (node_pos == nodes.size() - 1)
                         { // last gpl model
-                            Node *newNode = new_nodes(1);
+                            Node *newNode = nullptr;
+                            if (nodePool.empty())
+                            {
+                                newNode = new_nodes(1);
+                            }
+                            else
+                            {
+                                newNode = nodePool.top();
+                                nodePool.pop();
+                            }
                             newNode->numItems = node->numItems;
                             newNode->numInserts = 0;
                             newNode->expandNode = nullptr;
@@ -501,8 +528,9 @@ namespace alt_index
                             node_keys_num++;
                             buffer->build_fast_pointer(old_first_key, new_first_key, node->fastPointerIndex);
                         }
-                        //    std::cout << "trigger dynamic retraining:" << node_keys[node_pos] << std::endl;
                     }
+                    node->expandLock.unlock();
+                    //    std::cout << "trigger dynamic retraining:" << node_keys[node_pos] << std::endl;
                 }
                 // force evict data
                 if (node->numInserts > 2 * node->numItems && node->expand == true)
@@ -511,9 +539,8 @@ namespace alt_index
                     for (int i = 0; i < node->numItems; i++)
                     {
                         if(!BITMAP_GET(node->noneBitmap, i)){
-                            // std::cout << "haha4" << std::endl;
-                                evictData(node, node_pos, i);
-                                // BITMAP_SET(node->noneBitmap, i);
+                            evictData(node, node_pos, i);
+                            BITMAP_SET(node->noneBitmap, i);
                         }
                     }
                     // update pointer
@@ -555,9 +582,9 @@ namespace alt_index
                 }
                 else
                 {
-                    if(key == 349517445){
-                        std::cout << "node position: " << node_pos << " not found " << key << "position:" << key_pos << std::endl;
-                    }
+                    // if(key == 349517445){
+                    //     std::cout << "node position: " << node_pos << " not found " << key << "position:" << key_pos << std::endl;
+                    // }
                     exist = false;
                     return static_cast<ValueType>(0);
                 }
@@ -761,9 +788,11 @@ namespace alt_index
         {
             // check expand node bitmap and evict the data
             if(node->items[evict_pos].components.data.key != 0){
-                if(node->items[evict_pos].components.data.key == 349517445){
+                #ifdef DEBUG
+                // if(node->items[evict_pos].components.data.key == 678844549){
                     std::cout << "evict to expand node" << node->items[evict_pos].components.data.key << std::endl;
-                }
+                // }
+                #endif
                 insertToExpand(node->expandNode, node_pos, node->items[evict_pos].components.data.key, node->items[evict_pos].components.data.value);
             }
             BITMAP_CLEAR(node->expandNode->noneBitmap, evict_pos * 2);
@@ -793,9 +822,11 @@ namespace alt_index
                 expandNode->items[expand_pos].components.data.key = key;
                 expandNode->items[expand_pos].components.data.value = value;
                 expandNode->items[expand_pos].writeUnlock();
-                if(key == 349517445){
+                #ifdef DEBUG
+                // if(key == 678844549){
                     std::cout << "evict and insert to expand node" << key << std::endl;
-                }
+                // }
+                #endif
             }
             else
             {
@@ -813,6 +844,11 @@ namespace alt_index
                     expandNode->items[expand_pos].writeUnlock();
                 }
                 else{
+                    #ifdef DEBUG
+                    // if(key == 678844549){
+                        std::cout << "evict and insert to buffer" << key << std::endl;
+                    // }
+                    #endif
                     insertToBuffer(node_pos, key, value, expandNode);
                 }
             }
@@ -828,6 +864,8 @@ namespace alt_index
                 {
                     // std::cout << "haha6" << std::endl;
                     // std::cout << node_pos << " " << key << std::endl;
+                    ValueType haha;
+                    // std::cout << buffer->fastGet(key, haha, node->fastPointerIndex) << std::endl;
                     buffer->fastPut(key, value, node->fastPointerIndex);
                     if (USE_STATISTIC)
                     {
@@ -1074,6 +1112,7 @@ namespace alt_index
             const int bitmap_size = BITMAP_SIZE(node->numItems);
             node->noneBitmap = new_bitmap(bitmap_size);
             memset(node->noneBitmap, 0xff, sizeof(bitmap_t) * bitmap_size);
+            memset(node->items, 0, sizeof(Item) * node->numItems);
 
             node->fastPointerIndex = 0;
 
@@ -1087,6 +1126,11 @@ namespace alt_index
                     node->items[predict_pos].components.data.key = keys[index];
                     node->items[predict_pos].components.data.value = values[index];
                     node->numInsertToData++;
+                    #ifdef DEBUG
+                    if(keys[index] == 678844549){
+                        std::cout << "bulkload to node" << keys[index] << std::endl;
+                    }
+                    #endif
                 }
                 else
                 {
@@ -1096,6 +1140,11 @@ namespace alt_index
                     {
                         buffer_num++;
                     }
+                    #ifdef DEBUG
+                    if(keys[index] == 678844549){
+                        std::cout << "bulkload to buffer" << keys[index] << std::endl;
+                    }
+                    #endif
                 }
                 node->numInserts++;
             }

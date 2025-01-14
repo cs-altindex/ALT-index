@@ -34,23 +34,23 @@ int main() {
     sort(keys, keys + init_num, cmp);
     alt.bulkLoad(keys,init_num);
 
-    // omp_set_num_threads(12);
+    omp_set_num_threads(12);
 
-// #pragma omp parallel for schedule(static, 12)
+#pragma omp parallel for schedule(static, 12)
     for (i = init_num; i < key_num; i++) {
         bool exist = false;
         keys[i]={keys[i].first,i};
         std::cout << "insert key:" << keys[i].first<<", insert value: "<<keys[i].second<<std::endl;
         alt.insert(keys[i].first,keys[i].second);
     }
-// #pragma omp parallel for schedule(static, 12)
+#pragma omp parallel for schedule(static, 12)
     for (int i = 0; i < key_num; i++) {
         bool exist = false;
         std::cout<<"key: " << keys[i].first << " value at "<< i <<": "<<alt.find(keys[i].first,exist)<<std::endl;
         // alt.find(keys[i].first,exist);
-        // if(!exist){
-        //     std::cout<<"index: " << i << " key:"<<keys[i].first<<" not found!"<<std::endl;
-        // }
+        if(!exist){
+            std::cout<<"index: " << i << " key:"<<keys[i].first<<" not found!"<<std::endl;
+        }
     }
 
     return 0;

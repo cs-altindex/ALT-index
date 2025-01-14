@@ -7,6 +7,10 @@ This project contains the code of ALT-index. Our evaluation is based on [GRE](ht
 ## Compile and Run our project
 
 ```bash
+#install requirements
+sudo apt update && sudo apt install libjemalloc-dev libtbb-dev libopenmpi-dev
+
+#build
 mkdir build
 cd build
 cmake ..
@@ -26,26 +30,21 @@ make -j8
 ```c++
 string data_path = ${your own dataset path}
 ```
-2. set the statistic flag in ./include/alt_index (warning: this will damage the performance):
-
-```c++
-#define USE_STATISTIC true
-```
-3. run 
+2. run 
 ```bash
 ./build/ALT_index
 ```
 
 - Configurations for benchmark:
 ```c++
-#define ARR_GAPS 2
+#define ARR_GAPS ${your gaps} 
 
 #define USE_FAST_POINTER true
 #define USE_DYNAMIC_RETRAIN true
 
-#define USE_STATISTIC false   
+#define USE_STATISTIC false     //warning: this will damage the performance
 
-//on line 1031: the error bound of GPL model is set to bulkload number / 1000
+//on line 1069: the error bound of GPL model is set to bulkload number / 1000
 segmentPartition(keys + used_index, remain_nums, segment, num_keys / 1000);
 ```
 
