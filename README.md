@@ -50,8 +50,9 @@ segmentPartition(keys + used_index, remain_nums, segment, num_keys / 1000);
 
 ## Overall Benchmark
 
-We evaluate our ALT-index with GRE benchmarking tool, please refer to [GRE](https://github.com/cs-altindex/GRE_alt) for more details.
+We evaluate our ALT-index with GRE benchmarking tool, please refer to our repo [GRE_alt](https://github.com/cs-altindex/GRE_alt) for more details.
 
 ## Acknowledgement
 
-- Our optimized ART is based on [ARTSynchronized](https://github.com/flode/ARTSynchronized) 
+- Our optimized ART is based on [ARTSynchronized](https://github.com/flode/ARTSynchronized)
+- Our benchmark GRE_alt is based on [GRE](https://github.com/gre4index/GRE)
